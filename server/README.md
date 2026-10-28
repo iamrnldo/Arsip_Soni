@@ -15,7 +15,7 @@ Akun PostgreSQL yang digunakan perlu memiliki izin `CREATEDB` dan izin membuat e
 - `GET /api/health` — status API dan koneksi database
 - `POST /api/v1/auth/login`, `GET /api/v1/auth/me`
 - `GET /api/v1/dashboard` (surat diperbarui berkala oleh frontend)
-- `GET /api/v1/surat?search=&category=`, `POST /api/v1/surat` (multipart: `file`), `GET /api/v1/surat/:id/download`
+- `GET /api/v1/surat?search=&category=`, `POST /api/v1/surat` (multipart: `file`), `GET /api/v1/surat/:id/preview`, `GET /api/v1/surat/:id/download`
 - `GET /api/v1/users`, `POST /api/v1/users`, `PATCH /api/v1/users/:id` (Admin)
 - `GET /api/v1/calendar/events` (Google Calendar opsional)
 

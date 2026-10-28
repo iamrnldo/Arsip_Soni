@@ -22,10 +22,23 @@ export async function createLetter(req,res){
   res.status(201).json({letter:rows[0]});
  }catch(err){if(f)await fs.unlink(f.path).catch(()=>{});throw err;}
 }
-export async function downloadLetter(req,res){
+async function getLetterFile(req,res){
  const {rows}=await pool.query('SELECT category,stored_filename,original_filename,mime_type FROM letters WHERE id=$1',[req.params.id]);
- const doc=rows[0];if(!doc)return res.status(404).json({error:'Berkas surat tidak ditemukan.'});
- if(doc.category==='Rahasia'&&req.user.role!=='admin')return res.status(403).json({error:'Arsip rahasia hanya dapat dibuka Admin.'});
- if(!doc.stored_filename)return res.status(404).json({error:'Surat ini belum memiliki berkas.'});
- const file=path.resolve(process.env.UPLOAD_DIR||'uploads',doc.stored_filename);res.type(doc.mime_type||'application/octet-stream');res.download(file,doc.original_filename||'surat');
+ const doc=rows[0];if(!doc){res.status(404).json({error:'Berkas surat tidak ditemukan.'});return null;}
+ if(doc.category==='Rahasia'&&req.user.role!=='admin'){res.status(403).json({error:'Arsip rahasia hanya dapat dibuka Admin.'});return null;}
+ if(!doc.stored_filename){res.status(404).json({error:'Surat ini belum memiliki berkas.'});return null;}
+ return {doc,file:path.resolve(process.env.UPLOAD_DIR||'uploads',doc.stored_filename)};
+}
+export async function previewLetter(req,res){
+ const entry=await getLetterFile(req,res);if(!entry)return;
+ const {doc,file}=entry;
+ const previewable=new Set(['application/pdf','image/jpeg','image/png','image/gif','image/webp','text/plain','text/csv','audio/mpeg','audio/wav','audio/ogg','video/mp4','video/webm']);
+ if(!previewable.has((doc.mime_type||'').toLowerCase()))return res.status(415).json({error:'Tipe file ini belum dapat dipratinjau di browser. Silakan unduh berkasnya.'});
+ const name=path.basename(doc.original_filename||'preview');
+ res.set({'Content-Type':doc.mime_type,'Content-Disposition':`inline; filename="${name.replace(/["\\\\]/g,'_')}"`,'X-Content-Type-Options':'nosniff','Cross-Origin-Resource-Policy':'same-origin','Cache-Control':'private, no-store'});
+ res.sendFile(file);
+}
+export async function downloadLetter(req,res){
+ const entry=await getLetterFile(req,res);if(!entry)return;
+ const {doc,file}=entry;res.type(doc.mime_type||'application/octet-stream');res.download(file,doc.original_filename||'surat');
 }
