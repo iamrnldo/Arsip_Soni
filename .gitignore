@@ -1,0 +1,9 @@
+node_modules/
+.env
+.env.*
+!.env.example
+dist/
+coverage/
+client/.vite/
+server/uploads/*
+!server/uploads/.gitkeep
