@@ -21,9 +21,11 @@ CREATE TABLE IF NOT EXISTS letters (
   stored_filename TEXT,
   mime_type TEXT,
   file_size BIGINT,
+  secret_password_hash TEXT,
   uploaded_by UUID NOT NULL REFERENCES users(id),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+ALTER TABLE letters ADD COLUMN IF NOT EXISTS secret_password_hash TEXT;
 CREATE INDEX IF NOT EXISTS letters_date_idx ON letters(letter_date DESC);
 CREATE INDEX IF NOT EXISTS letters_category_idx ON letters(category);
 CREATE TABLE IF NOT EXISTS audit_logs (

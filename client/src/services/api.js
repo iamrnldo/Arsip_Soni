@@ -11,13 +11,13 @@ export async function api(path,{method='GET',body,headers={}}={}){
  const data=await response.json().catch(()=>({error:'Respons server tidak valid.'}));
  if(!response.ok)throw new Error(data.error||`Request gagal (${response.status})`);return data;
 }
-export async function downloadFile(path,filename){
- const token=getToken();const response=await fetch(`${API_URL}${path}`,{headers:token?{Authorization:`Bearer ${token}`}:{}});
+export async function downloadFile(path,filename,secretPassword){
+ const token=getToken();const headers={'Content-Type':'application/json'};if(token)headers.Authorization=`Bearer ${token}`;const response=await fetch(`${API_URL}${path}`,{method:'POST',headers,body:JSON.stringify({secret_password:secretPassword||''})});
  if(!response.ok){const data=await response.json().catch(()=>({}));throw new Error(data.error||`Unduh gagal (${response.status})`)}
  const blob=await response.blob();const url=URL.createObjectURL(blob);const link=document.createElement('a');link.href=url;link.download=filename||'surat';document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
-export async function previewFile(path){
- const token=getToken();const response=await fetch(`${API_URL}${path}`,{headers:token?{Authorization:`Bearer ${token}`}:{}});
+export async function previewFile(path,secretPassword){
+ const token=getToken();const headers={'Content-Type':'application/json'};if(token)headers.Authorization=`Bearer ${token}`;const response=await fetch(`${API_URL}${path}`,{method:'POST',headers,body:JSON.stringify({secret_password:secretPassword||''})});
  if(!response.ok){const data=await response.json().catch(()=>({}));throw new Error(data.error||`Pratinjau gagal (${response.status})`)}
  const blob=await response.blob();return {url:URL.createObjectURL(blob),type:blob.type};
 }
