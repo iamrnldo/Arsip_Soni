@@ -2,10 +2,11 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import bcrypt from 'bcryptjs';
 import { pool } from '../config/database.js';
-const selectable=`l.id,l.code,l.name,l.type,l.category,to_char(l.letter_date,'DD Mon YYYY') AS date,l.letter_date::text AS letter_date,l.direction,u.name AS owner,l.original_filename,l.mime_type,l.file_size,l.created_at`;
+const selectable=`l.id,l.code,l.name,l.type,l.category,to_char(l.letter_date,'DD Mon YYYY') AS date,l.letter_date::text AS letter_date,l.direction,u.name AS owner,l.original_filename,l.mime_type,l.file_size,(l.secret_password_hash IS NOT NULL) AS has_secret_password,l.created_at`;
 export async function listLetters(req,res){
- const {category,search}=req.query;const vals=[];let where=req.user.role==='admin'?'TRUE':`l.category <> 'Rahasia'`;
- if(category&&['Umum','Penting','Rahasia'].includes(category)){vals.push(category);where+=` AND l.category=$${vals.length}`;}
+ const {category,search}=req.query;const vals=[];let where=`l.category <> 'Rahasia'`;
+ if(category==='Rahasia'){if(req.user.role!=='admin')return res.status(403).json({error:'Arsip Rahasia hanya dapat dibuka Admin.'});where=`l.category='Rahasia'`;}
+ else if(category&&['Umum','Penting'].includes(category)){vals.push(category);where+=` AND l.category=$${vals.length}`;}
  if(search){vals.push(`%${search}%`);where+=` AND (l.name ILIKE $${vals.length} OR l.code ILIKE $${vals.length})`;}
  const {rows}=await pool.query(`SELECT ${selectable} FROM letters l JOIN users u ON u.id=l.uploaded_by WHERE ${where} ORDER BY l.letter_date DESC,l.created_at DESC LIMIT 200`,vals);
  res.json({letters:rows});
@@ -18,7 +19,7 @@ export async function createLetter(req,res){
  if(category==='Rahasia'&&(!secret_password||secret_password.length<10))return fail(400,'Surat Rahasia wajib memakai password minimal 10 karakter.');
  try{
   const secretHash=category==='Rahasia'?await bcrypt.hash(secret_password,12):null;
-  const {rows}=await pool.query(`INSERT INTO letters(code,name,type,category,letter_date,direction,original_filename,stored_filename,mime_type,file_size,secret_password_hash,uploaded_by) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING id,code,name,type,category,to_char(letter_date,'DD Mon YYYY') AS date,letter_date::text AS letter_date,direction,original_filename,mime_type,file_size`,[code,name,type,category,letter_date,direction,f?.originalname||null,f?.filename||null,f?.mimetype||null,f?.size||null,secretHash,req.user.sub]);
+  const {rows}=await pool.query(`INSERT INTO letters(code,name,type,category,letter_date,direction,original_filename,stored_filename,mime_type,file_size,secret_password_hash,uploaded_by) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING id,code,name,type,category,to_char(letter_date,'DD Mon YYYY') AS date,letter_date::text AS letter_date,direction,original_filename,mime_type,file_size,(secret_password_hash IS NOT NULL) AS has_secret_password`,[code,name,type,category,letter_date,direction,f?.originalname||null,f?.filename||null,f?.mimetype||null,f?.size||null,secretHash,req.user.sub]);
   await pool.query('INSERT INTO audit_logs(actor_id,action,entity_type,entity_id,ip_address) VALUES($1,$2,$3,$4,$5)',[req.user.sub,'create','letter',rows[0].id,req.ip]);
   res.status(201).json({letter:rows[0]});
  }catch(err){if(f)await fs.unlink(f.path).catch(()=>{});throw err;}
@@ -38,8 +39,9 @@ async function getLetterFile(req,res){
 }
 export async function previewLetter(req,res){
  const entry=await getLetterFile(req,res);if(!entry)return;const {doc,file}=entry;
- const previewable=new Set(['application/pdf','image/jpeg','image/png','image/gif','image/webp','text/plain','text/csv','audio/mpeg','audio/wav','audio/ogg','video/mp4','video/webm']);
- if(!previewable.has((doc.mime_type||'').toLowerCase()))return res.status(415).json({error:'Tipe file ini belum dapat dipratinjau di browser. Silakan unduh berkasnya.'});
+ const previewable=new Set(['application/pdf','image/jpeg','image/png','image/gif','image/webp','text/plain','text/csv','audio/mpeg','audio/wav','audio/ogg','video/mp4','video/webm','application/vnd.openxmlformats-officedocument.wordprocessingml.document','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','application/vnd.ms-excel']);
+ const officeExt=new Set(['.docx','.xlsx','.xls','.xlsm']).has(path.extname(doc.original_filename||'').toLowerCase());
+ if(!previewable.has((doc.mime_type||'').toLowerCase())&&!officeExt)return res.status(415).json({error:'Tipe file ini belum dapat dipratinjau. Gunakan DOCX untuk Word, XLSX/XLS untuk Excel, atau unduh berkasnya.'});
  const name=path.basename(doc.original_filename||'preview');
  res.set({'Content-Type':doc.mime_type,'Content-Disposition':`inline; filename="${name.replace(/["\\\\]/g,'_')}"`,'X-Content-Type-Options':'nosniff','Cross-Origin-Resource-Policy':'same-origin','Cache-Control':'private, no-store'});
  res.sendFile(file);
@@ -61,7 +63,7 @@ export async function updateLetter(req,res){
   }else if(category!==undefined&&category!=='Rahasia')sets.push('secret_password_hash=NULL');
   if(file){values.push(file.originalname,file.filename,file.mimetype,file.size);const n=values.length-3;sets.push(`original_filename=$${n}`,`stored_filename=$${n+1}`,`mime_type=$${n+2}`,`file_size=$${n+3}`)}
   if(!sets.length)return fail(400,'Tidak ada perubahan untuk disimpan.');
-  const {rows}=await pool.query(`UPDATE letters SET ${sets.join(',')} WHERE id=$1 RETURNING id,code,name,type,category,to_char(letter_date,'DD Mon YYYY') AS date,letter_date::text AS letter_date,direction,original_filename,mime_type,file_size`,values);
+  const {rows}=await pool.query(`UPDATE letters SET ${sets.join(',')} WHERE id=$1 RETURNING id,code,name,type,category,to_char(letter_date,'DD Mon YYYY') AS date,letter_date::text AS letter_date,direction,original_filename,mime_type,file_size,(secret_password_hash IS NOT NULL) AS has_secret_password`,values);
   if(file&&existing.stored_filename)await fs.unlink(path.resolve(process.env.UPLOAD_DIR||'uploads',existing.stored_filename)).catch(()=>{});
   res.json({letter:rows[0]});
  }catch(err){if(file)await fs.unlink(file.path).catch(()=>{});throw err;}

@@ -9,7 +9,7 @@ export async function api(path,{method='GET',body,headers={}}={}){
  if(body&&!(body instanceof FormData))h['Content-Type']='application/json';
  const response=await fetch(`${API_URL}${path}`,{method,headers:h,body:body instanceof FormData?body:body?JSON.stringify(body):undefined});
  const data=await response.json().catch(()=>({error:'Respons server tidak valid.'}));
- if(!response.ok)throw new Error(data.error||`Request gagal (${response.status})`);return data;
+ if(!response.ok)throw new Error(data.error||data.message||`Request gagal (${response.status})`);return data;
 }
 export async function downloadFile(path,filename,secretPassword){
  const token=getToken();const headers={'Content-Type':'application/json'};if(token)headers.Authorization=`Bearer ${token}`;const response=await fetch(`${API_URL}${path}`,{method:'POST',headers,body:JSON.stringify({secret_password:secretPassword||''})});

@@ -15,7 +15,10 @@ Akun PostgreSQL yang digunakan perlu memiliki izin `CREATEDB` dan izin membuat e
 - `GET /api/health` — status API dan koneksi database
 - `POST /api/v1/auth/login`, `GET /api/v1/auth/me`
 - `GET /api/v1/dashboard` (surat diperbarui berkala oleh frontend)
-- `GET /api/v1/surat?search=&category=`, `POST /api/v1/surat` (multipart: `file`), `GET /api/v1/surat/:id/preview`, `GET /api/v1/surat/:id/download`
+- `GET /api/v1/surat?search=&category=` (kategori Rahasia hanya untuk Admin melalui `category=Rahasia`), `POST /api/v1/surat` (multipart: `file` dan, untuk Rahasia, `secret_password`), `PATCH /api/v1/surat/:id`, `DELETE /api/v1/surat/:id`
+- `POST /api/v1/surat/:id/preview`, `POST /api/v1/surat/:id/download` menerima JSON `{ "secret_password": "..." }`; password per surat Rahasia disimpan sebagai hash.
+
+Surat Rahasia dikecualikan dari dashboard dan daftar surat umum; tampil di menu **Arsip Rahasia** untuk Admin. Skema otomatis menambahkan kolom password hash pada startup. Pratinjau dokumen mendukung PDF, gambar, DOCX, XLSX/XLS/XLSM, teks, audio, dan video. Format Word `.doc` lama tidak dirender; gunakan DOCX atau unduh berkasnya.
 - `GET /api/v1/users`, `POST /api/v1/users`, `PATCH /api/v1/users/:id` (Admin)
 - `GET /api/v1/calendar/events` (Google Calendar opsional)
 
