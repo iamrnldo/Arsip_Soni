@@ -1,4 +1,4 @@
-import express from 'express';import cors from 'cors';import helmet from 'helmet';import rateLimit from 'express-rate-limit';import authRoutes from './routes/auth.routes.js';import letterRoutes from './routes/surat.routes.js';import userRoutes from './routes/user.routes.js';import dashboardRoutes from './routes/dashboard.routes.js';import calendarRoutes from './routes/calendar.routes.js';import {notFound,errorHandler} from './middlewares/error.middleware.js';import {pool} from './config/database.js';
+import express from 'express';import cors from 'cors';import helmet from 'helmet';import rateLimit from 'express-rate-limit';import authRoutes from './routes/auth.routes.js';import letterRoutes from './routes/surat.routes.js';import userRoutes from './routes/user.routes.js';import dashboardRoutes from './routes/dashboard.routes.js';import calendarRoutes from './routes/calendar.routes.js';import newsRoutes from './routes/news.routes.js';import {notFound,errorHandler} from './middlewares/error.middleware.js';import {pool} from './config/database.js';
 const app=express();
 app.disable('x-powered-by');app.set('trust proxy',1);
 app.use(helmet({crossOriginResourcePolicy:{policy:'same-site'}}));
@@ -6,5 +6,5 @@ app.use(cors({origin:(process.env.CLIENT_ORIGIN||'http://localhost:5173').split(
 app.use(express.json({limit:'1mb'}));app.use(express.urlencoded({extended:true,limit:'1mb'}));
 app.get('/api/health',async(req,res)=>{let database='connected';try{await pool.query('SELECT 1')}catch{database='disconnected'}const status=database==='connected'?'ok':'degraded';res.status(status==='ok'?200:503).json({status,service:'kediri-desa-api',api:'connected',database,time:new Date().toISOString()})});
 app.use('/api/v1/auth/login',rateLimit({windowMs:15*60*1000,limit:20,standardHeaders:true,legacyHeaders:false}));
-app.use('/api/v1/auth',authRoutes);app.use('/api/v1/dashboard',dashboardRoutes);app.use('/api/v1/surat',letterRoutes);app.use('/api/v1/users',userRoutes);app.use('/api/v1/calendar',calendarRoutes);
+app.use('/api/v1/auth',authRoutes);app.use('/api/v1/dashboard',dashboardRoutes);app.use('/api/v1/surat',letterRoutes);app.use('/api/v1/users',userRoutes);app.use('/api/v1/calendar',calendarRoutes);app.use('/api/v1/news',newsRoutes);
 app.use(notFound);app.use(errorHandler);export default app;

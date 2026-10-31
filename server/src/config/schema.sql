@@ -28,6 +28,29 @@ CREATE TABLE IF NOT EXISTS letters (
 ALTER TABLE letters ADD COLUMN IF NOT EXISTS secret_password_hash TEXT;
 CREATE INDEX IF NOT EXISTS letters_date_idx ON letters(letter_date DESC);
 CREATE INDEX IF NOT EXISTS letters_category_idx ON letters(category);
+CREATE TABLE IF NOT EXISTS village_news (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  title VARCHAR(255) NOT NULL,
+  content TEXT NOT NULL,
+  event_title VARCHAR(255),
+  event_date DATE,
+  location VARCHAR(255),
+  leader VARCHAR(180),
+  notetaker VARCHAR(180),
+  participants TEXT,
+  agenda TEXT,
+  results TEXT,
+  notes TEXT,
+  image_filename TEXT,
+  image_mime VARCHAR(80),
+  status VARCHAR(20) NOT NULL DEFAULT 'draft' CHECK (status IN ('draft','published')),
+  author_id UUID NOT NULL REFERENCES users(id),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE village_news ADD COLUMN IF NOT EXISTS image_filename TEXT;
+ALTER TABLE village_news ADD COLUMN IF NOT EXISTS image_mime VARCHAR(80);
+CREATE INDEX IF NOT EXISTS village_news_status_date_idx ON village_news(status,event_date DESC,created_at DESC);
 CREATE TABLE IF NOT EXISTS audit_logs (
   id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   actor_id UUID REFERENCES users(id),
