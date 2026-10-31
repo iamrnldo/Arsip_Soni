@@ -53,7 +53,7 @@ function App(){
     <aside className={`sidebar ${mobileOpen?'sidebar-open':''}`}>
       <div className="brand"><Crest/><div><strong>Arsip<span>Kita</span></strong><small>DESA KEDIRI</small></div><button className="mobile-close" onClick={()=>setMobileOpen(false)}><X size={18}/></button></div>
       <div className="village-label"><span className="online-dot"/> SISTEM PERSURATAN</div>
-      {nav.map(group=><div className="nav-group" key={group.title}><p>{group.title}</p>{group.items.map(([label,Icon])=><button key={label} onClick={()=>{setPage(label);setMobileOpen(false)}} className={`nav-link ${page===label?'active':''}`}><Icon size={18} strokeWidth={1.8}/><span>{label}</span>{label==='Arsip Rahasia'&&<span className="nav-lock"><LockKeyhole size={12}/></span>}</button>)}</div>)}
+      {nav.filter(group=>group.title!=='MANAJEMEN'||user?.role==='admin').map(group=><div className="nav-group" key={group.title}><p>{group.title}</p>{group.items.map(([label,Icon])=><button key={label} onClick={()=>{setPage(label);setMobileOpen(false)}} className={`nav-link ${page===label?'active':''}`}><Icon size={18} strokeWidth={1.8}/><span>{label}</span>{label==='Arsip Rahasia'&&<span className="nav-lock"><LockKeyhole size={12}/></span>}</button>)}</div>)}
       <div className="sidebar-spacer"/>
 
     </aside>
